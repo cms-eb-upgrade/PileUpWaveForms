@@ -74,8 +74,8 @@ every ````20```` filled BX
 
 ## Complete orbits
 
-One generage stream of samples during several LHC orbits.
-For example, to generage 160 MHz samples for 500 GeV signal pulses,
+One can generate a stream of samples during several LHC orbits.
+For example, to generate 160 MHz samples for 500 GeV signal pulses,
 on top of PU=200,
 in one channel ieta=85, iphi=1, 
 during 2 orbits,
