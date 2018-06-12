@@ -84,3 +84,12 @@ starting with BX=10, every 20 BXs
 MakeTreeWaveformsWithSignal( 6.25, 1e+9, 85, 85, 1, 1, 2, 500, 10, 20, "180410_wf_01.root")
 ````
 
+
+
+## Generate H->gg on top of PU200
+
+One can prepare waveforms in all 61200 ECAL channels for H->gg decays with PU200. For example, to generate first 1000ns of the first orbit with 160MHz sampling, and inserting H->gg events every 20 BXs starting with BX=10
+````
+MakeTreeWaveformsDecayMode(6.25, 1000., 1, 10, 20, "hgg_1000evt_pu200.root", "output.root")
+````
+One need to download ````hgg_1000evt_pu200.root````` with H->gg events from my EOS area

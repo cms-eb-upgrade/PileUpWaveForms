@@ -31,6 +31,14 @@ TBranch *b_tAPD1;
 TBranch *b_eAPD2;
 TBranch *b_tAPD2;
 
+TChain *trSig;
+unsigned short nhitsSig;
+unsigned short hashedIndexSig[61200];
+float  eSig[61200];
+TBranch *b_nhitsSig;
+TBranch *b_hashedIndexSig;
+TBranch *b_eSig;
+
 int h2eta[61200];
 int h2phi[61200];
 double sinTheta[85];
@@ -123,6 +131,18 @@ void Load()
   tr->SetBranchAddress("tAPD1",tAPD1,&b_tAPD1);
   tr->SetBranchAddress("eAPD2",eAPD2,&b_eAPD2);
   tr->SetBranchAddress("tAPD2",tAPD2,&b_tAPD2);
+}
+
+
+
+void LoadDecay(TString fname)
+{
+  trSig = new TChain("T");
+  trSig->Add(fname.Data());
+
+  trSig->SetBranchAddress("nhits",&nhitsSig,&b_nhitsSig);
+  trSig->SetBranchAddress("hashedIndex",hashedIndexSig,&b_hashedIndexSig);
+  trSig->SetBranchAddress("eXtal",eSig,&b_eSig);
 }
 
 
@@ -514,4 +534,168 @@ void PlotFiveWaveform(TString fname="output.root", int ieta=85, int iphiMin=1, i
   leg->Draw(); 
    
     
+}
+
+
+
+void MakeTreeWaveformsDecayMode(double tstep=6.25,
+				double timeMax =  1000.0,
+				int nOrbs   =  1,
+				int firstBXsignal = 10,
+				int stepBXsignal  = 20,
+				TString fnameDecay = "hgg_1000evt_pu200.root",
+				TString fnameOut = "output.root")
+{
+  
+  MapChannels();
+  MakeLHCFillingScheme();
+
+  // Mask channels to process: ALL channels should be processed for Signal Decay mode
+  bool isGood[61200];
+  for(int i=0; i<61200; i++){
+      isGood[i] = true;
+  }
+  /*
+  int ietaMin = -85;
+  int ietaMax = +85;
+  int iphiMin =  1;
+  int iphiMax =  360;
+  for(int i=0; i<61200; i++){
+    if(h2eta[i]>=ietaMin && h2eta[i]<=ietaMax && h2phi[i]>=iphiMin && h2phi[i]<=iphiMax){
+      isGood[i] = true;
+    }else{
+      isGood[i] = false;
+    }
+  }
+  */
+  
+  Load();
+  int nentries = (int)tr->GetEntries();
+  cout << " PU nentries " << nentries << endl;
+
+  LoadDecay(fnameDecay);
+  int nentriesSig = (int)trSig->GetEntries();
+  cout << " Signal nentries " << nentriesSig << endl;
+  int counterSig = 0;
+  
+  Pulse *pulse = new Pulse(2);
+  
+  double timeMaxOrbit =  25.0 * NBXMAX;
+  
+  TFile *fout = new TFile(fnameOut.Data(), "recreate");
+  TTree *tr_out = new TTree("WF", "");
+  double amp[61200];
+  double timeNow = -10.0;
+  tr_out->Branch("timeNow", &timeNow, "timeNow/D");
+  tr_out->Branch("amp",     amp,      "amp[61200]/D");
+
+  
+  int ientry = 0;
+  for(int iorb=0; iorb<nOrbs; iorb++){
+
+    cout << " Initializing energies for orbit " << iorb+1 << " of " << nOrbs << endl;
+    for(int ibx=0; ibx<NBXMAX; ibx++){
+      for(int ich=0; ich<NCHMAX; ich++){
+	ene[ibx][ich] = 0;
+      }
+    }
+    
+    
+    // Randomly populate BXs in this orbit with MinBias events from
+    // the file
+    
+    bool isEmpty[NBXFILLED];
+    for(int i=0; i<NBXFILLED; i++){
+      isEmpty[i] = true;
+    }
+    int nBXEmpty = NBXFILLED;
+    int debug[NBXMAX];
+    for(int i=0; i<NBXMAX; i++){
+      debug[i] = -1;
+    }
+    
+    while(nBXEmpty>0){
+
+      if(ientry>=nentries)
+	ientry = 0;
+      tr->GetEntry(ientry);
+      ientry++;
+
+      int id = (int) nBXEmpty * rnd.Rndm();
+      int counter = 0;
+      for(int i=0; i<NBXFILLED; i++){
+	if(isEmpty[i]){
+	  if(counter==id){
+
+	    cout << " Filling PU energies in BX " << indexBXFilled[i]
+		 << " Remaining empty BXs: " << nBXEmpty << endl;
+	    
+	    for(int ih=0; ih<nhits; ih++){
+	      ene[indexBXFilled[i]][hashedIndex[ih]] += eXtal[ih];
+	    }
+	    debug[indexBXFilled[i]] = ientry;
+	    nBXEmpty--;
+	    isEmpty[i] = false;
+	    break;
+	    if(nBXEmpty<=0) break;
+	  }
+	  counter++;
+	}
+      }
+    }
+    
+    // Fill with signal energies
+    
+    for(int i=0; i<NBXFILLED; i++){
+      if( i>=firstBXsignal && (i-firstBXsignal)%stepBXsignal==0 ){
+	if(counterSig >= nentriesSig){
+	  counterSig = 0;
+	}
+	trSig->GetEntry(counterSig);
+	counterSig++;
+	   
+	cout << " Filling Signal energies in BX " << indexBXFilled[i] << " ";
+
+	double emax = 0;
+	int    idmax = 0;
+	for(int ih=0; ih<nhitsSig; ih++){
+	  if(isGood[hashedIndexSig[ih]]){	    
+	    // Overwrite (not add) if signal MC includes PU
+	    ene[indexBXFilled[i]][hashedIndexSig[ih]] = eSig[ih];
+	    if(eSig[ih] >= emax){
+	      emax = eSig[ih];
+	      idmax = hashedIndexSig[ih];
+	    }
+	  }
+	}
+	cout << "  Emax hit: hashedIndex=" << idmax << " energy=" << emax << endl;
+      }
+    }
+
+    cout << " Finished orbit " << iorb << endl;
+
+    // Start making waveforms
+
+    while(timeNow< min(timeMax, (iorb+1) * timeMaxOrbit) ){
+    
+      for(int ich=0; ich<NCHMAX; ich++){
+	amp[ich] = 0;
+	if(isGood[ich]){
+	  for(int ibx=0; ibx<NBXMAX; ibx++){
+	    double timeRelative = timeNow - timeMaxOrbit * iorb - 25.0 * ibx;
+	    if(timeRelative > timeMax) continue;
+	    if(timeRelative < 0 ) break;
+	    if(timeRelative > 3000.) continue;  // hard cut on 120 bx, ignore long tales
+	    amp[ich] += ene[ibx][ich] * pulse->Value(timeRelative + rophase);
+	  }
+	}
+      }
+      cout << " Time within orbit " << iorb+1  << " of " << nOrbs << " is " << timeNow << " ns" << endl;
+      tr_out->Fill();      
+      timeNow += tstep;
+    }
+  }
+  fout->cd();
+  tr_out->Write();
+  fout->Close();
 }
