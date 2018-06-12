@@ -92,4 +92,4 @@ One can prepare waveforms in all 61200 ECAL channels for H->gg decays with PU200
 ````
 MakeTreeWaveformsDecayMode(6.25, 1000., 1, 10, 20, "hgg_1000evt_pu200.root", "output.root")
 ````
-One need to download ````hgg_1000evt_pu200.root````` with H->gg events from my EOS area
+One need to download ````hgg_1000evt_pu200.root```` with H->gg events from my EOS area
