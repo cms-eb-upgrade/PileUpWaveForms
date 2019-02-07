@@ -23,7 +23,7 @@ pu200_minbias_xtals_04.root
 ````
 Each file is about 160 MB
 
-## Signal Pulse shape
+## Signal and Spike Pulse shapes
 
 The default pulse shape is from Marc, obtained from run 9862 at TB-H4 in October 2017. 
 The hit crystal is C3@150 GeV
@@ -34,6 +34,27 @@ root -l
 .L WaveformsPU200.C+
 PlotPulse()
 ````
+
+Older version of Signal and Spike pulse shapes (CATIA v1) are also available
+````
+PlotPulse(0)
+PlotPulse(1)
+````
+for signal and spike, respecively
+In Examples below, one can substitute
+````
+  Pulse *pulse = new Pulse(2);
+````
+with
+````
+  Pulse *pulse = new Pulse(0);
+````
+or
+````
+  Pulse *pulse = new Pulse(1);
+````
+to choose olde signal or spike pulses
+
 
 ## LHC filling scheme
 

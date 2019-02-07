@@ -426,9 +426,9 @@ void PlotWaveform(TString fname="output.root", int ieta=85, int iphi=1)
 
 
 
-void PlotPulse()
+void PlotPulse(int iopt=2)
 {
-  Pulse *pulse = new Pulse(2);
+  Pulse *pulse = new Pulse(iopt);
   TGraph *gr = new TGraph();
   for(int i=0; i<1000; i++){
     double t = 0.1 * i;
